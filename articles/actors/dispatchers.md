@@ -5,41 +5,42 @@ title: Dispatchers
 
 # Dispatchers
 
-## What Do Dispatchers Do?
-Dispatchers are responsible for scheduling all code that run inside the `ActorSystem`. Dispatchers are one of the most important parts of Akka.NET, as they control the throughput and time share for each of the actors, giving each one a fair share of resources.
+## 调度器是做什么的?
 
-By default, all actors share a single **Global Dispatcher**. Unless you change the configuration, this dispatcher uses the *.NET Thread Pool* behind the scenes, which is optimized for most common scenarios. **That means the default configuration should be *good enough* for most cases.**
+Dispatchers负责调度ActorSystem内部运行的所有代码。Dispatchers是Akka.NET的重要组成部分，因为它们控制每个Actor的吞吐量和分享时间，从而为每个参与者提供公平的资源。
 
-#### Why should I use different dispatchers?
+默认情况下，所有Actors共享一个全局调度器。除非您更改配置，否则此调度程序将在后台使用.NET线程池，该池针对大多数常见场景进行了优化。这意味着对于大多数情况，默认配置应该足够好。
 
-When messages arrive in the [actor's mailbox](xref:mailboxes), the dispatcher schedules the delivery of messages in batches, and tries to deliver the entire batch before releasing the thread to another actor. While the default configuration is *good enough* for most scenarios, you may want to change ([through configuration](#configuring-dispatchers)) how much time the scheduler should spend running each actor.
+#### 为什么要使用不同的调度器?
 
-There are some other common reasons to select a different dispatcher. These reasons include (but are not limited to):
+当消息到达Actor的邮箱时，dispatcher会安排消息的批量传递，并尝试在将线程释放给另一个Actor之前传递整批消息。虽然默认配置对于大多数场景来说已经足够好了，但是您可能需要（通过配置）更改调度器运行每个参与者所需的时间。
 
-* isolating one or more actors to specific threads in order to:
-  * ensure high-load actors don't starve the system by consuming too much cpu-time;
-  * ensure important actors always have a dedicated thread to do their job;
-  * create [bulkheads](http://skife.org/architecture/fault-tolerance/2009/12/31/bulkheads.html), ensuring problems created in one part of the system do not leak to others;
-* allow actors to execute in a specific SyncrhonizationContext;
+选择不同的调度器还有其他一些常见的原因。这些原因包括（但不限于）：
+
+* 将一个或多个Actor隔离到特定线程，以便：
+  * 确保高负载Actor不会因为消耗太多cpu时间而导致系统饥饿；
+  * 确保重要的Actor总是有一个专门的线程来完成他们的工作；
+  * 制造舱壁，确保系统某一部分产生的问题不会泄漏给其他部分；
+* 允许Actor在特定的SyncrhonizationContext中执行；
 
 > [!NOTE]
-> Consider using custom dispatchers for special cases only. Correctly configuring dispatchers requires some understanding of how the framework works. Custom dispatchers *should not* be considered the default solution for performance problems. It's considered normal for complex applications to have one or a few custom dispatchers, it's not usual for most or all actors in a system to require a custom dispatcher configuration.
+> 请考虑仅在特殊情况下使用自定义调度器。正确配置dispatchers需要了解框架的工作原理。自定义调度程序不应被视为性能问题的默认解决方案。对于复杂的应用程序来说，拥有一个或几个定制的调度器是正常的，对于系统中的大多数或所有参与者来说，需要定制的调度器配置是不常见的。
 
-## Dispatchers vs. Dispatcher Configurations
+## 调度器和调度器配置
 
-Throughout this documentation and most Akka literature available, the term *dispatcher* is used to refer to *dispatcher configurations*, but they are in fact different things.
+在本文档和大多数可用的Akka文献中，术语dispatcher用于指代dispatcher配置，但实际上它们是不同的东西。
 
-- **Dispatchers** are low level components that are responsible for scheduling code execution in the system. These components are built into Akka.NET, there is a fixed number of them and you don't need to create or change them.
+- **调度器** 是负责在系统中调度代码执行的低级组件。这些组件内置于Akka.NET，它们的数量是固定的，您不需要创建或更改它们。
 
-- **Dispatcher Configurations** are custom settings you can create to *make use of dispatchers* in specific ways. There are some built-in dispatcher configurations, and you can create as many as you need for your applications.
+- **调度器 配置** 您可以创建自定义设置，以特定方式使用dispatchers。有一些内置的dispatcher配置，您可以根据需要为应用程序创建任意多个。
 
-Therefore, when you read about *"creating a custom dispatcher"* it usually means "*using a custom configuration for one of the built-in dispatchers*".
+因此，当你读到“创建一个定制的调度器”时，它通常意味着“为一个内置的调度器使用一个定制的配置”.
 
-## Configuring Dispatchers
+## 配置 调度器
 
-You can define a custom dispatcher configuration using a HOCON configuration section.
+您可以使用HOCON配置节定义自定义调度器配置。
 
-The example below creates a custom dispatcher called `my-dispatcher` that can be set in one or more actors during deployment:
+下面的示例创建了一个名为`my-dispatcher`的自定义调度器，可以在部署期间在一个或多个参与者中设置它：
 
 ```hocon
 my-dispatcher {
@@ -49,7 +50,7 @@ my-dispatcher {
 }
 ```
 
-You can then set actor's dispatcher using the deployment configuration:
+然后可以使用部署配置设置actor的调度器：
 
 ```hocon
 akka.actor.deployment {
@@ -59,7 +60,7 @@ akka.actor.deployment {
 }
 ```
 
-Or you can also set it up in code:
+或者你也可以在代码中配置：
 
 ```cs
 system.ActorOf(Props.Create<MyActor>().WithDispatcher("my-dispatcher"), "my-actor");
