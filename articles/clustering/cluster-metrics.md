@@ -5,62 +5,63 @@ title: Akka.Cluster.Metrics module
 
 # Akka.Cluster.Metrics module
 
-The member nodes of the cluster can collect system health metrics and publish that to other cluster nodes and 
-to the registered subscribers on the system event bus with the help of Cluster Metrics Extension.
+集群的成员节点可以通过`Cluster Metrics`扩展收集系统健康指标，并将其发布到其他集群节点和系统事件总线上的注册者。
 
-Cluster metrics information is primarily used for load-balancing routers, 
-and can also be used to implement advanced metrics-based node life cycles, such as “Node Let-it-crash” when CPU steal time becomes excessive.
+集群指标主要用于负载平衡路由器，还可以用于实现基于高级度量的节点生命周期，例如当CPU占用时间过长时“节点让它崩溃”。
 
-Cluster members with status `WeaklyUp`, if that feature is enabled, will participate in Cluster Metrics collection and dissemination.
+状态为`WeaklyUp`的集群成员（如果启用了该功能）将参与集群指标的收集和分发。
 
 ## Metrics Collector
 
-Metrics collection is delegated to an implementation of `Akka.Cluster.Metrics.IMetricsCollector`.
+指标收集器功能接口为`Akka.Cluster.Metrics.IMetricsCollector`.
 
-Different collector implementations may provide different subsets of metrics published to the cluster. 
-Metrics currently supported are defined in `Akka.Cluster.Metrics.StandardMetrics` class:
-* `MemoryUsed` - total memory allocated to the currently running process
-* `MemoryAvailable` - memory, available for the process
-* `MaxMemoryRecommended` - if set, memory limit recommended for current process
-* `Processors` - number of available processors
-* `CpuProcessUsage` - CPU usage by current process
-* `CpuTotalUsage` - total CPU usage
+不同的收集器实现可以提供不同的指标发布到集群中。
 
-> Note: currently, due to some .NET Core limitations `CpuTotalUsage` is the same as `CpuProcessUsage` metrics, 
-> but this is something to be fixed in near future (see [this issue](https://github.com/akkadotnet/akka.net/issues/4142) for details).
+当前支持的指标定义在 `Akka.Cluster.Metrics.StandardMetrics`类：
 
-Cluster metrics extension comes with built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector implementation, 
-which collects all metrics defined above.
+* `MemoryUsed`—分配给当前运行进程的总内存
+* `MemoryAvailable`-可用内存
+* `MaxMemoryRecommended`-如果已设置，则为当前进程建议内存限制
+* `Processors`—可用处理器的数量
+* `cprupAccessUsage`-当前进程的CPU使用率
+* `CpuTotalUsage`-总CPU使用率
 
-You can also plug-in your own metrics collector implementation.
+> 注意：目前，由于某些.NET核心限制，“CpuTotalUsage”与“cprupAccessUsage”指标相同，
+> 但这是在不久的将来要解决的问题（见[本期](https://github.com/akkadotnet/akka.net/issues/4142)详细信息）。
 
-By default, metrics extension will use collector provider fall back and will try to load them in this order:
-1. configured user-provided collector (see `Configuration` section for details)
-2. built-in `Akka.Cluster.Metrics.Collectors.DefaultCollector` collector
+它收集了上面定义的所有指标都在``Akka.Cluster.Metrics.Collectors.DefaultCollector`中实现了
+
+您还可以插入自己的指标收集器实现。
+
+默认情况下，指标扩展将使用`collector provider fall back`并尝试按以下顺序加载它们：
+1. 已配置用户提供的收集器（有关详细信息，请参阅`Configuration`部分）
+2. 内置 `Akka.Cluster.Metrics.Collectors.DefaultCollector`收集器
 
 ## Metrics Events
 
-Metrics extension periodically publishes current snapshot of the cluster metrics to the node system event bus.
+指标扩展定期将集群指标的当前快照发布到节点系统事件总线。
 
-The publication interval is controlled by the `akka.cluster.metrics.collector.sample-interval` setting.
+发布间隔由`akka.cluster.metrics.collector.sample-interval`setting。
 
-The payload of the `Akka.Cluster.Metrics.Events.ClusterMetricsChanged` event will contain latest metrics of the node as well as 
-other cluster member nodes metrics gossip which was received during the collector sample interval.
-
-You can subscribe your metrics listener actors to these events in order to implement custom node lifecycle:
+`Akka.Cluster.Metrics.Events.ClusterMetricsChanged`事件将包含节点的最新指标以及在收集器采样间隔期间接收到的其他群集成员节点指标。
+您可以向这些事件订阅侦听器参与者，以便实现自定义节点生命周期：
 ```c#
 ClusterMetrics.Get(Sys).Subscribe(metricsListenerActor);
 ```
 
 ## Adaptive Load Balancing
 
-The `AdaptiveLoadBalancingPool` / `AdaptiveLoadBalancingGroup` performs load balancing of messages to cluster nodes based on the cluster metrics data. 
-It uses random selection of routees with probabilities derived from the remaining capacity of the corresponding node. 
-It can be configured to use a specific `IMetricsSelector` implementation to produce the probabilities, a.k.a. weights:
+`AdaptiveLoadBalancingPool`/`AdaptiveLoadBalancingGroup`根据集群指标数据对发送到集群节点的消息执行负载平衡。
 
-* `memory` / `MemoryMetricsSelector` - Used and max available memory. Weights based on remaining memory capacity: (max - used) / max
-* `cpu` / `CpuMetricsSelector` - CPU utilization in percentage. Weights based on remaining cpu capacity: 1 - utilization
-* `mix` / `MixMetricsSelector` - Combines memory and cpu. Weights based on mean of remaining capacity of the combined selectors.
+它使用相应节点的剩余内存容量数据计算随机选择的路由对象的概率。
+
+它可以配置为使用特定的'imericsselector'实现来生成概率，即权重：
+
+* `memory`/`MEMORYMETRICSELECTOR`-已用内存和最大可用内存。基于剩余内存容量的权重：（max-used）/max
+
+* `cpu`/`cpumetercselector`—以百分比表示的cpu利用率。基于剩余cpu容量的权重：1-利用率
+
+* `mix`/`MixMetricsSelector`-结合了内存和cpu。基于组合选择器剩余容量平均值的权重。
 
 The collected metrics values are smoothed with [exponential weighted moving average](https://en.wikipedia.org/wiki/Moving_average#Exponential_moving_average). 
 In the cluster configuration you can adjust how quickly past data is decayed compared to new data.
